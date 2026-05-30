@@ -16,7 +16,6 @@ resource "aws_subnet" "subnet" {
   availability_zone       = lookup(each.value, "availability_zone", null)
   map_public_ip_on_launch = lookup(each.value, "map_public_ip_on_launch", false)
   tags                    = merge({ Name = "${each.key}" }, var.tags)
-
 }
 
 #igw
@@ -26,6 +25,7 @@ resource "aws_internet_gateway" "igw" {
 
   tags = merge({ Name = "${each.key}" }, var.tags)
 }
+
 #igw route
 resource "aws_route" "igw_route" {
   for_each = var.internet_gateway != null ? { for igw in [var.internet_gateway] : igw.name => igw } : {}
@@ -39,7 +39,7 @@ resource "aws_route" "igw_route" {
 #Elastic ip for natgateways
 resource "aws_eip" "nat_eip" {
   for_each = {
-    for k, v in var.nat_gateways : k => v 
+    for k, v in var.nat_gateways : k => v
     if lookup(v, "connectivity_type", "public") == "public"
   }
 
@@ -52,7 +52,7 @@ resource "aws_nat_gateway" "ngw" {
 
   subnet_id         = aws_subnet.subnet[each.value.subnet_key].id
   connectivity_type = lookup(each.value, "connectivity_type", "public")
-  allocation_id = lookup(each.value, "allocation_id", null) != null ? each.value.allocation_id : try(aws_eip.nat_eip[each.key].allocation_id, null)
+  allocation_id     = lookup(each.value, "allocation_id", null) != null ? each.value.allocation_id : try(aws_eip.nat_eip[each.key].allocation_id, null)
   tags              = merge({ Name = "${each.key}" }, var.tags)
 
   depends_on = [aws_internet_gateway.igw]
@@ -64,7 +64,6 @@ resource "aws_route" "ngw_route" {
   route_table_id         = aws_route_table.route_table[each.value.route_table_key].id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.ngw[each.key].id
-
 }
 
 resource "aws_route_table" "route_table" {
